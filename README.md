@@ -20,10 +20,6 @@ Piece identity (pawn, knight, rook, etc.) is not read directly from the sensor �
 
 ## Wiring & Pin Mapping
 
-Full schematic drawn in KiCad:
-
-<!-- Tutaj wklej swój link do schematu ze starego README -->
-
 | Signal | Arduino Pin | Notes |
 | :--- | :--- | :--- |
 | `S0` / `S1` / `S2` / `S3` | `D7` / `D8` / `D9` / `D10` | Shared 4-bit address bus wired in parallel to all 4 multiplexers |
@@ -33,11 +29,10 @@ Full schematic drawn in KiCad:
 | `SIG3` (`e5–h8`) | `A2` | Half 2 — Kingside quadrant (MUX 3, in progress) |
 | `SIG4` (`a5–d8`) | `A3` | Half 2 — Queenside quadrant (MUX 4, in progress) |
 
-## Project Structure
+## Repository Files
 
-- `firmware/board_scan.ino` — scans multiplexer channels in parallel and streams square states over Serial
-- `software/chess_visualizer.py` — live Python + Web GUI dashboard for real-time matrix diagnostics
-- `docs/images/` — build photos and KiCad schematic
+- `chessboardVisualiser.ino` — Arduino C++ firmware that scans the multiplexer banks in parallel and streams square occupancy states over Serial (`115200` baud).
+- `chessboardVisualiser.py` — Live Python web dashboard (`pyserial` + local HTTP/JS interface) for real-time matrix visualization, sensor value monitoring, and timestamped event logging.
 
 ## Challenges & Lessons Learned
 
@@ -57,13 +52,9 @@ Full schematic drawn in KiCad:
 - Electrolytic decoupling capacitors (`10 µF` / `100 µF`)
 - Perfboards, 30 AWG Kynar wire, flexible multi-core cable, lead-free solder (`Sn99.3Cu0.7`)
 
-## Photos
-
-<!-- Tutaj zostaw swoje linki do zdjęć ze starego README -->
-
 ## Status
 
-**Working Prototype (In Progress):**
+**Working Prototype (In Progress — November 2026):**
 The first half of the board (32 squares, `a1–h4`, across two `CD74HC4067` multiplexers) is wired, tested channel-by-channel, and running live with the Python web visualizer. Second half (`a5–h8`) wiring and move-tracking logic (`chess_logic`) are currently in progress.
 
 ## License
