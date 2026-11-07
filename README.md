@@ -1,89 +1,71 @@
-# Elektroniczna Szachownica
+# Magnetic Chess Board — Real-Time Piece Tracking System
 
-Szachownica z automatycznym wykrywaniem pozycji figur, oparta o Arduino i matrycę czujników magnetycznych. System wykrywa obecność figury na każdym z 64 pól w czasie rzeczywistym i śledzi ruchy w partii bez ingerencji gracza.
+An electronic chessboard built around an Arduino Nano and a 64-sensor magnetic matrix that detects piece positions in real time and tracks game moves automatically without player intervention.
 
-<p align="center">
-  <img src="docs/images/board-overview.jpg" width="45%" />
-  <img src="docs/images/board-underside.jpg" width="45%" />
-</p>
+## How It Works
 
-## Jak to działa
+Each chess piece has a small neodymium magnet embedded in its base. Beneath each of the 64 squares sits a normally-open (NO) magnetic reed switch. When a piece rests on a square, its magnet closes the reed switch, pulling the corresponding multiplexer channel to `GND`. The Arduino scans the matrix and streams the board state over Serial to a live Python web dashboard.
 
-Każda figura ma w podstawce osadzony mały magnes neodymowy. Pod planszą, pod każdym z 64 pól, znajduje się kontaktron (reed switch) — czujnik reagujący na pole magnetyczne. Gdy figura stoi na polu, magnes zamyka obwód kontaktronu; Arduino odczytuje ten stan i na tej podstawie śledzi, które pola są zajęte.
+Piece identity (pawn, knight, rook, etc.) is not read directly from the sensor — instead, the system tracks pieces in software based on the known starting position and standard chess rules, updating the internal board representation as squares are vacated and occupied.
 
-Typ figury (pionek, wieża, itd.) nie jest odczytywany bezpośrednio z czujnika — system śledzi go programowo na podstawie znanej pozycji startowej i zasad ruchu figur w szachach, aktualizując wewnętrzny model gry na podstawie tego, które pola się zwolniły, a które zajęły.
+## Hardware Overview
 
-## Przegląd sprzętowy
+**Logic & Sensing (5V):**
+- **Arduino Uno / Nano** — drives the shared address bus, reads analog/digital states across the multiplexer banks, and streams real-time occupancy data over UART (`115200` baud).
+- **4× CD74HC4067 (16-channel analog/digital multiplexers)** — each module handles one 16-square quadrant. All four share a common 4-bit address bus (`S0–S3`), with `EN` tied permanently to `GND` and each `SIG` output routed to a dedicated Arduino pin (`A0–A3`). This eliminates the need for separate chip-select lines and reduces the total MCU pin count from 64 down to 8.
+- **64× Magnetic Reed Switches (NO, 2×14 mm)** — one per square, wired between a common `GND` rail and the multiplexer channel inputs (`C0–C15`), utilizing the Arduino's internal pull-up resistors (`INPUT_PULLUP`).
 
-**Logika (5V):**
-- Arduino Uno/Nano — odczytuje 64 czujniki przez kaskadę multiplekserów i wypisuje stan planszy
-- 4× CD74HC4067 (16-kanałowy multiplekser analogowy) — każdy obsługuje 16 pól, przełączane wspólnymi liniami adresowymi S0-S3 i osobną linią EN dla każdego modułu
-- 64× kontaktron magnetyczny (reed switch, typ NO, 2×14mm) — po jednym pod każdym polem, podłączone przez wewnętrzny pull-up Arduino
+**Mechanical Construction:**
+- The board is split into two physically separate halves matching a folding wooden chessboard, linked across the hinge via a flexible multi-core cable carrying `VCC`, `GND`, `S0–S3`, and the two remote `SIG` lines.
 
-**Czujniki w figurach:**
-- Magnesy neodymowe osadzone w podstawkach figur
+## Wiring & Pin Mapping
 
-Konstrukcja podzielona jest na dwie fizycznie osobne płytki (odpowiadające dwóm połówkom składanej szachownicy), połączone elastycznym kablem wielożyłowym w miejscu zawiasu.
+Full schematic drawn in KiCad:
 
-## Schemat
+<!-- Tutaj wklej swój link do schematu ze starego README -->
 
-Pełny schemat, narysowany w KiCad:
+| Signal | Arduino Pin | Notes |
+| :--- | :--- | :--- |
+| `S0` / `S1` / `S2` / `S3` | `D7` / `D8` / `D9` / `D10` | Shared 4-bit address bus wired in parallel to all 4 multiplexers |
+| `EN` (MUX 1–4) | `GND` | Permanently enabled (active-low) to save 4 digital I/O pins |
+| `SIG1` (`e1–h4`) | `A0` | Half 1 — Kingside quadrant (MUX 1) |
+| `SIG2` (`a1–d4`) | `A1` | Half 1 — Queenside quadrant (MUX 2) |
+| `SIG3` (`e5–h8`) | `A2` | Half 2 — Kingside quadrant (MUX 3, in progress) |
+| `SIG4` (`a5–d8`) | `A3` | Half 2 — Queenside quadrant (MUX 4, in progress) |
 
-![Schemat elektroniczny szachownicy](docs/images/chessboard_schematic.png)
+## Project Structure
 
-Mapowanie pinów:
+- `firmware/board_scan.ino` — scans multiplexer channels in parallel and streams square states over Serial
+- `software/chess_visualizer.py` — live Python + Web GUI dashboard for real-time matrix diagnostics
+- `docs/images/` — build photos and KiCad schematic
 
-| Sygnał | Pin Arduino |
-|---|---|
-| S0 | D7 |
-| S1 | D8 |
-| S2 | D9 |
-| S3 | D10 |
-| EN1 / EN2 / EN3 / EN4 | D2 / D3 / D4 / D5 |
-| SIG1 / SIG2 / SIG3 / SIG4 | A0 / A1 / A2 / A3 |
+## Challenges & Lessons Learned
 
-## Struktura projektu
-firmware/
-board_scan.ino - skanuje wszystkie 64 pola, wypisuje stan planszy na Serial
-src/
-(planowane) chess_logic - śledzenie typu figur i historii ruchów na podstawie occupancy
-docs/
-images/ - zdjęcia i schemat
+- **Sensor Selection (Hall Effect vs. Reed Switches):** The initial approach used linear analog Hall-effect sensors (`SS49E`), which proved unreliable across the several-millimeter air gap introduced by the board thickness. Switching to hermetically sealed reed switches solved the sensitivity problem at the cost of analog field-strength measurement — which was unnecessary given software-based piece tracking.
+- **Glass-to-Metal Seal Fragility:** Reed switches have fragile hermetic glass envelopes; bending leads too close to the glass body creates microscopic cracks that either break the contact immediately or allow air ingress and oxidation. Pre-screening switches with a multimeter continuity test before soldering eliminated dead channels.
+- **Parallel Multiplexer Addressing:** Instead of cascading the `CD74HC4067` modules with separate `EN` lines (`D2–D5`), tying `EN` permanently to `GND` and reading `A0–A3` in parallel for each `S0–S3` address saved 4 MCU pins, reduced wire count across the hinge, and simplified the scanning loop.
+- **Live Software Diagnostics vs. Live Probing:** Probing densely packed IC pins under power with a multimeter carries a real risk of shorting adjacent pins. Building a live Python web visualizer made it easy to isolate cold solder joints or cracked switches safely in real time.
+- **Magnetic Shielding & Magnet Sizing:** Strong neodymium magnets in adjacent pieces caused mutual attraction across narrow squares. Rather than relying on ferromagnetic shielding tape (which provided insufficient attenuation), the final design uses weaker magnets matched specifically to the reed switch actuation threshold.
+- **Lead-Free Soldering (`Sn99.3Cu0.7`):** Higher melting temperatures and faster tip oxidation compared to leaded solder required longer dwell times, frequent tip cleaning, and consistent tinning across the Kynar wire matrix.
 
+## Bill of Materials
 
-## Wyzwania i wnioski
+- Arduino Uno / Nano
+- 4× CD74HC4067 16-channel multiplexer breakout boards
+- 64× Normally-Open (NO) magnetic reed switches (2×14 mm)
+- Neodymium magnets (embedded in chess piece bases)
+- Electrolytic decoupling capacitors (`10 µF` / `100 µF`)
+- Perfboards, 30 AWG Kynar wire, flexible multi-core cable, lead-free solder (`Sn99.3Cu0.7`)
 
-- **Dobór czujnika:** pierwsze podejście wykorzystywało analogowe czujniki Halla (SS49E), które ostatecznie okazały się niedopasowane do skali odległości figura–czujnik w tym zastosowaniu — czujniki tego typu sprawdzają się przy bardzo małych, kontrolowanych dystansach (np. w padach do gier), nie przy kilkumilimetrowej odległości przez grubość planszy. Przejście na kontaktrony magnetyczne (reed switch) rozwiązało problem czułości, kosztem rezygnacji z pomiaru siły pola — co i tak nie było potrzebne, skoro typ figury można śledzić programowo na podstawie logiki gry.
-- **Diagnostyka multipleksera:** odróżnienie usterki konkretnego kanału od usterki całego układu wymagało systematycznego podejścia — test ze znanym, kontrolowanym sygnałem (zamiast samego czujnika) na pojedynczym wejściu szybko rozstrzygał, czy problem leży w komponencie, czy w reszcie ścieżki sygnałowej.
-- **Lutowanie cyną bezołowiową:** wyższa temperatura topnienia i szybsze utlenianie grota (Sn99,3Cu0,7) wymagały innej techniki niż przy klasycznej cynie ołowiowej — dłuższe podgrzewanie, częstsze czyszczenie i cynowanie grota.
-- **Ostrożność przy pomiarach pod napięciem:** pomiar multimetrem na gęsto upakowanych nóżkach układu scalonego pod napięciem niesie realne ryzyko przypadkowego zwarcia sąsiednich pinów — bezpieczniejsze okazało się diagnozowanie przez sam mikrokontroler (odczyt przez Serial) zamiast sondowania na żywo.
-- **Ekranowanie pola magnetycznego:** silne magnesy w sąsiadujących figurach wzajemnie się przyciągały; testowane ferromagnetyczne taśmy ekranujące nie dały wystarczającej redukcji — docelowe rozwiązanie to dobór słabszych magnesów dopasowanych do czułości kontaktronu.
+## Photos
 
-## Lista komponentów
-
-- Arduino Uno/Nano
-- 4× CD74HC4067
-- 64× kontaktron magnetyczny NO 2×14mm
-- Magnesy neodymowe
-- Płytki uniwersalne (prototypowe)
-- Elastyczny kabel wielożyłowy (połączenie między połówkami planszy)
-- Drut kynar, cyna bezołowiowa Sn99,3Cu0,7
-
-## Zdjęcia
-
-**Test pojedynczego modułu multipleksera**
-![Test multipleksera](docs/images/mux-test.jpg)
-
-**Lutowanie matrycy czujników**
-![Lutowanie](docs/images/soldering-progress.jpg)
-
-**Widok od spodu z okablowaniem**
-![Spód planszy](docs/images/board-underside.jpg)
+<!-- Tutaj zostaw swoje linki do zdjęć ze starego README -->
 
 ## Status
 
-W budowie. Pierwsza połówka planszy (32 pola) zlutowana i przetestowana kanał po kanale — multiplekser i odczyt kontaktronów działają poprawnie. Druga połówka oraz warstwa logiki gry (śledzenie ruchów, rozpoznawanie typu figury na podstawie zasad szachowych) w toku.
+**Working Prototype (In Progress):**
+The first half of the board (32 squares, `a1–h4`, across two `CD74HC4067` multiplexers) is wired, tested channel-by-channel, and running live with the Python web visualizer. Second half (`a5–h8`) wiring and move-tracking logic (`chess_logic`) are currently in progress.
 
-## Licencja
+## License
 
 MIT
