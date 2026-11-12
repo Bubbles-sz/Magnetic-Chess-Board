@@ -58,12 +58,11 @@ Piece identity (pawn, knight, rook, etc.) is not read directly from the sensor �
 **Live Python Diagnostic Dashboard (`a1–h4` active across MUX 1 & MUX 2):**
 ![Live Python Diagnostic Dashboard](visualizerPhoto.png)
 
-**Reed Switch Matrix Layout:**
-![Reed Switch Matrix](sensors.jpg)
+**Reed Switch Matrix & 30 AWG Kynar Point-to-Point Wiring:**
+![Reed Switch Matrix and Wiring](sensors.jpg)
 
-**Underside Wiring & Multiplexer Integration:**
-![Underside Wiring](backboard.jpg)
-
+**Arduino Nano & Dual CD74HC4067 Multiplexer Side:**
+![Arduino Nano and Multiplexers](backboard.jpg)
 ## Status
 
 **Working Prototype (In Progress — November 2026):**
