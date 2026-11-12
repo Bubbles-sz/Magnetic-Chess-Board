@@ -33,6 +33,7 @@ Piece identity (pawn, knight, rook, etc.) is not read directly from the sensor �
 
 - `chessboardVisualiser.ino` — Arduino C++ firmware that scans the multiplexer banks in parallel and streams square occupancy states over Serial (`115200` baud).
 - `chessboardVisualiser.py` — Live Python web dashboard (`pyserial` + local HTTP/JS interface) for real-time matrix visualization, sensor value monitoring, and timestamped event logging.
+- `visualizerPhoto.png`, `sensors.jpg`, `backboard.jpg` — Hardware build photos and live diagnostic dashboard screenshot.
 
 ## Challenges & Lessons Learned
 
@@ -51,6 +52,17 @@ Piece identity (pawn, knight, rook, etc.) is not read directly from the sensor �
 - Neodymium magnets (embedded in chess piece bases)
 - Electrolytic decoupling capacitors (`10 µF` / `100 µF`)
 - Perfboards, 30 AWG Kynar wire, flexible multi-core cable, lead-free solder (`Sn99.3Cu0.7`)
+
+## Photos
+
+**Live Python Diagnostic Dashboard (`a1–h4` active across MUX 1 & MUX 2):**
+![Live Python Diagnostic Dashboard](visualizerPhoto.png)
+
+**Reed Switch Matrix Layout:**
+![Reed Switch Matrix](sensors.jpg)
+
+**Underside Wiring & Multiplexer Integration:**
+![Underside Wiring](backboard.jpg)
 
 ## Status
 
